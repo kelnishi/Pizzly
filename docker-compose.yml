@@ -1,6 +1,52 @@
 version: '3'
 services:
+
   database:
     image: postgres
+    container_name: postgres
+    restart: always
     ports:
-      - '5432:5432'
+      - 5432:5432
+    environment:
+      - DB_USERNAME=postgres
+      - POSTGRES_PASSWORD=password
+    networks:
+      - pizzly
+
+  adminer:
+    image: adminer
+    depends_on:
+      - "database"
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - pizzly
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - POSTGRES_PASSWORD=password
+
+  pizzly:
+    image: pizzly
+    depends_on: 
+      - "database"
+    ports:
+      - 8888:8080
+    networks:
+      - pizzly
+    environment:
+      - PORT=8080
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_DATABASE=pizzly
+
+
+networks:
+  pizzly:
+    driver: bridge  
