@@ -2,41 +2,34 @@
 
 
 # Build image 
-FROM node:15.11.0-alpine3.13
+FROM node:15.11.0-alpine3.13 AS base
 
 RUN apk update
-RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing direnv
 RUN apk add bash
+RUN apk add postgresql-client
 
 WORKDIR /app
 
 # Copy in dependencies for building
 COPY *.json ./
 COPY yarn.lock ./
-#COPY config ./config
 COPY integrations ./integrations/
 COPY src ./src/
 COPY tests ./tests/
 COPY views ./views/
-COPY .envrc ./
+COPY wait-init.sh ./
 
 RUN yarn install 
 
-#SHELL ["/bin/bash", "-c"]
-#RUN eval "$(direnv hook bash)"
-#RUN direnv allow .envrc
+# Need this to run the wait-init first go, should really be in yarn?
+RUN npm install knex -g
+
 
 # Actual image to run from.
-FROM node:15.11.0-alpine3.13
-
-RUN apk update
+FROM base AS deployment
 
 # Make sure we have ca certs for TLS
 RUN apk --no-cache add ca-certificates
-
-RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing direnv
-RUN apk add bash
-RUN apk add curl
 
 # Make a directory for the node user. Not running Pizzly as root.
 RUN mkdir /home/node/app && chown -R node:node /home/node/app
@@ -44,10 +37,11 @@ WORKDIR /home/node/app
 
 USER node
 
-COPY --chown=node:node --from=0 /app/dist/ .
-COPY --chown=node:node --from=0 /app/views ./views
-COPY --chown=node:node --from=0 /app/node_modules ./node_modules
+COPY --chown=node:node --from=base /app/dist/ .
+COPY --chown=node:node --from=base /app/views ./views
+COPY --chown=node:node --from=base /app/node_modules ./node_modules
+COPY --chown=node:node --from=base /app/wait-init.sh ./
 
-COPY --chown=node:node --from=0 /app/.envrc ./
+RUN chmod +x wait-init.sh
 
 CMD ["node", "src"]

@@ -10,18 +10,15 @@ services:
     environment:
       - DB_USERNAME=postgres
       - POSTGRES_PASSWORD=password
-    networks:
-      - pizzly
 
   adminer:
     image: adminer
+    container_name: adminer
     depends_on:
       - "database"
     restart: always
     ports:
       - 8080:8080
-    networks:
-      - pizzly
     environment:
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
@@ -31,22 +28,20 @@ services:
 
   pizzly:
     image: pizzly
-    depends_on: 
-      - "database"
+    container_name: pizzly
+    build: .
     ports:
       - 8888:8080
-    networks:
-      - pizzly
+    depends_on:
+      - "database"
+
     environment:
       - PORT=8080
       - DB_CONNECTION=pgsql
-      - DB_HOST=postgres
+      - DB_HOST=database
       - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_DATABASE=pizzly
 
-
-networks:
-  pizzly:
-    driver: bridge  
+    command: ["./wait-init.sh", "node", "src"]
