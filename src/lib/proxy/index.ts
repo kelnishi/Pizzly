@@ -74,18 +74,7 @@ export const incomingRequestHandler = async (req, res, next) => {
     const externalRequest = https.request(url, { headers, method: req.method }, externalResponse => {
       externalResponseHandler(externalResponse, req, res, next)
     })
-
-    //Forward JSON content data because it just doesn't go over the pipe for some reason.
-    if (req.body && req.get('Content-Type') == 'application/json') {
-      let bodyData = JSON.stringify(req.body);
-      externalRequest.setHeader('Content-Type','application/json');
-      externalRequest.setHeader('Content-Length', Buffer.byteLength(bodyData));
-      // stream the content
-      externalRequest.write(bodyData);
-    } else {
-        req.pipe(externalRequest)
-    }
-    
+    req.pipe(externalRequest)
 
     // Handle error
     externalRequest.on('error', error => {
